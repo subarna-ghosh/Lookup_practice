@@ -739,12 +739,188 @@ class LookupController {
   async agg16(req, res) {
     try {
       const data = await Task.aggregate([
-        
+        {
+          $lookup: {
+            from: "users",
+            localField: "assignedTo",
+            foreignField: "_id",
+            as: "User",
+          },
+        },
+        { $unwind: "$User" },
+        {
+          $group: {
+            _id: "$User.name",
+            totalHoursWorked: { $sum: "$hoursWorked" },
+          },
+        },
+        { $project: { _id: 0, userName: "$_id", totalHoursWorked: 1 } },
       ]);
 
       return res.status(200).json({
         success: true,
         count: data.length,
+        data,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  async agg17(req, res) {
+    try {
+      const data = await User.aggregate([
+        {
+          $lookup: {
+            from: "departments",
+            localField: "deptId",
+            foreignField: "_id",
+            as: "Dept",
+          },
+        },
+        { $unwind: "$Dept" },
+        {
+          $group: {
+            _id: "$Dept.deptName",
+            avgSalary: { $avg: "$salary" },
+          },
+        },
+        { $match: { avgSalary: { $gt: 50000 } } },
+        {
+          $project: {
+            _id: 0,
+            deptName: "$_id",
+            avgSalary: 1,
+          },
+        },
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        count: data.length,
+        data,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  async agg18(req, res) {
+    try {
+      const data = await Project.aggregate([
+        {
+          $lookup: {
+            from: "tasks",
+            localField: "_id",
+            foreignField: "projectId",
+            as: "Task",
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            projectName: 1,
+            budget: 1,
+
+            totalHoursWorked: {
+              $sum: "$Task.hoursWorked",
+            },
+
+            totalEmployeesInvolved: {
+              $size: {
+                $setUnion: ["$Task.assignedTo", []], //set removes duplicates.
+              },
+            },
+          },
+        },
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        count: data.length,
+        data,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  async agg19(req, res) {
+    try {
+      const data = await Task.aggregate([
+        {
+          $group: {
+            _id: "$assignedTo",
+            projects: { $addToSet: "$projectId" }, // adds value to an array unless the value is already present
+          },
+        },
+        {
+          $project: {
+            projectCount: {
+              $size: "$projects",
+            },
+          },
+        },
+        {
+          $match: {
+            projectCount: { $gt: 2 },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id", //assignedTo
+            foreignField: "_id",
+            as: "User",
+          },
+        },
+        { $project: { _id: 0, userName: "$User.name", projectCount: 1 } },
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        count: data.length,
+        data,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  async agg20(req, res) {
+    try {
+      const data = await User.aggregate([
+        { $group: { _id: null, totalSalaryExpense: { $sum: "$salary" } } },
+        { $project: { _id: 0, totalSalaryExpense: 1 } },
+      ]);
+      const totalUsers = await User.countDocuments();
+      const totalDepartments = await Department.countDocuments();
+
+      const totalActiveProjects = await Project.countDocuments({
+        status: "active",
+      });
+
+      const totalCompletedTasks = await Task.countDocuments({
+        status: "completed",
+      });
+      return res.status(200).json({
+        success: true,
+        count: data.length,
+        totalDepartments,
+        totalActiveProjects,
+        totalCompletedTasks,
         data,
       });
     } catch (error) {

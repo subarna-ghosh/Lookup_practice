@@ -31,4 +31,8 @@ Router.get("/agg13", LookupController.agg13);
 Router.get("/agg14", LookupController.agg14);//
 Router.get("/agg15", LookupController.agg15);
 Router.get("/agg16", LookupController.agg16);
+Router.get("/agg17", LookupController.agg17);
+Router.get("/agg18", LookupController.agg18);
+Router.get("/agg19", LookupController.agg19);
+Router.get("/agg20", LookupController.agg20);
 module.exports = Router;
